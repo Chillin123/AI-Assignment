@@ -22,7 +22,7 @@ import random
 from random import randint
 
 drive.mount('/content/drive')
-df=pd.read_csv("/content/drive/MyDrive/Colab Files/creditcard.csv")
+df=pd.read_csv("/content/drive/MyDrive/Aiass/creditcard.csv")
 
 """### **DATA PREPROCESSING**"""
 
@@ -193,3 +193,74 @@ def hill_climbing(current_features, get_fitness, neighborhood, get_feature):
         print(get_feature(current_features))
 # run the hill climbing algorithm to select the best features
 best_features = hill_climbing(current_features, get_fitness, neighborhood, get_feature)
+
+"""## PARTICLE SWARM OPTIMIZATION"""
+
+# Define the PSO parameters
+n_particles = 3
+max_iterations = 2
+inertia_weight = 0.7
+cognitive_weight = 1.5
+social_weight = 1.5
+
+# Load the clean Credit Card Fraud dataset
+# Assume the dataset is loaded into X and y, where X is the feature matrix and y is the target variable
+
+# Step 1: Generate initial population (feature names)
+tcol =np.delete(col, 30)
+A = tcol
+n_features = 30
+particle_position = np.zeros((n_particles, n_features), dtype=bool)
+particle_velocity = np.zeros((n_particles, n_features), dtype=bool)
+particle_best_position = np.zeros((n_particles, n_features), dtype=bool)
+global_best_position = np.zeros(n_features, dtype=bool)
+global_best_fitness = float('-inf')
+
+#Mapping encoded features to actual features
+def get_feature(cur_feat):
+    features=[]
+    for i in range(30):
+        if(cur_feat[i]==1):
+            features.append(tcol[i])
+    return features
+
+# Step 2: Initialize particles' positions and velocities
+for i in range(n_particles):
+    np.random.shuffle(A)
+    particle_position[i] = np.random.rand(n_features) < 0.5
+    particle_velocity[i] = np.random.rand(n_features) < 0.5
+    particle_best_position[i] = particle_position[i].copy()
+
+# PSO main loop
+for iteration in range(max_iterations):
+    # Step 3: Compute fitness for each particle
+    particle_fitness = np.zeros(n_particles)
+    for i in range(n_particles):
+        # Use the selected features in particle_position as the candidate feature vector
+        # Train a classifier with these features and compute its accuracy
+        # Update particle_fitness[i] with the computed accuracy
+        # Note: The higher the accuracy, the better the fitness
+        cur_fitness= get_fitness(get_feature(particle_position[i]))
+        # Update particle's best position and global best position
+        if cur_fitness > particle_fitness[i]:
+            particle_best_position[i] = particle_position[i].copy()
+            particle_fitness[i]=cur_fitness
+        if particle_fitness[i] > global_best_fitness:
+            global_best_fitness = particle_fitness[i]
+            global_best_position = particle_position[i].copy()
+
+    # Update particles' velocities and positions
+    for i in range(n_particles):
+        # Update particle's velocity using PSO formula
+        particle_velocity[i] = (inertia_weight * particle_velocity[i]
+                                + cognitive_weight * np.random.rand(n_features) * (particle_best_position[i] ^particle_position[i])
+                                + social_weight * np.random.rand(n_features) * (global_best_position ^particle_position[i]))
+
+        # Update particle's position
+        particle_position[i] = particle_position[i] ^ (particle_velocity[i] > 0.5)
+
+# Extract the selected features from the global best position
+selected_features = np.array(A)[global_best_position].tolist()
+
+# Output the selected features
+print("Selected Features:", selected_features)
